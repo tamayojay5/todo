@@ -9,6 +9,7 @@ export default function AuthForm() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const { signIn, signUp } = useAuth()
 
@@ -16,12 +17,17 @@ export default function AuthForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccess('')
 
     try {
       if (isSignUp) {
         await signUp(email, password)
+        setSuccess('Account created successfully! Please check your email to verify your account.')
+        setEmail('')
+        setPassword('')
       } else {
         await signIn(email, password)
+        setSuccess('Welcome back! Redirecting...')
       }
     } catch (error: any) {
       setError(error.message)
@@ -57,6 +63,12 @@ export default function AuthForm() {
               {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-2xl text-sm">
                   {error}
+                </div>
+              )}
+              
+              {success && (
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-2xl text-sm">
+                  {success}
                 </div>
               )}
 
@@ -163,6 +175,7 @@ export default function AuthForm() {
                   onClick={() => {
                     setIsSignUp(!isSignUp)
                     setError('')
+                    setSuccess('')
                   }}
                   className="text-sm text-gray-600"
                 >
