@@ -75,7 +75,7 @@ export default function TodoList() {
         setShowDueDateModal(true)
         
         // Mark these todos as notified
-        const newNotifiedSet = new Set([...notifiedTodos, ...overdueTodos.map(todo => todo.id)])
+        const newNotifiedSet = new Set([...Array.from(notifiedTodos), ...overdueTodos.map(todo => todo.id)])
         setNotifiedTodos(newNotifiedSet)
         saveNotifiedTodos(newNotifiedSet)
       }
