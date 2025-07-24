@@ -17,15 +17,26 @@ func main() {
 
 	router := mux.NewRouter()
 	
+	// Health check endpoint for Railway
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	}).Methods("GET")
+	
 	router.HandleFunc("/api/todos", handlers.GetTodos).Methods("GET")
 	router.HandleFunc("/api/todos", handlers.CreateTodo).Methods("POST")
 	router.HandleFunc("/api/todos/{id}", handlers.UpdateTodo).Methods("PUT")
 	router.HandleFunc("/api/todos/{id}", handlers.DeleteTodo).Methods("DELETE")
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:3000"},
+		AllowedOrigins: []string{
+			"http://localhost:3000",
+			"https://*.vercel.app",
+			"https://vercel.app",
+		},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"*"},
+		AllowCredentials: true,
 	})
 
 	handler := c.Handler(router)

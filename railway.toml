@@ -9,8 +9,3 @@
 
 [variables]
   PORT = "8080"
-  DB_HOST = "${{PGHOST}}"
-  DB_PORT = "${{PGPORT}}"
-  DB_USER = "${{PGUSER}}"
-  DB_PASSWORD = "${{PGPASSWORD}}"
-  DB_NAME = "${{PGDATABASE}}"
