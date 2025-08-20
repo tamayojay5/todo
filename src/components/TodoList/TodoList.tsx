@@ -9,6 +9,9 @@ import TodoForm from '../TodoForm/TodoForm'
 import DueDateModal from '../DueDateModal/DueDateModal'
 import TodoDetailsModal from '../TodoDetailsModal/TodoDetailsModal'
 import BigCalendar from '../BigCalendar/BigCalendar'
+import ThemeToggle from '../ThemeToggle/ThemeToggle'
+import KanbanView from '../KanbanView/KanbanView'
+import SearchFilter from '../SearchFilter/SearchFilter'
 import { isAfter, parseISO, isSameDay } from 'date-fns'
 
 export default function TodoList() {
@@ -20,6 +23,9 @@ export default function TodoList() {
   const [notifiedTodos, setNotifiedTodos] = useState<Set<string>>(new Set())
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [detailsTodo, setDetailsTodo] = useState<Todo | null>(null)
+  const [currentView, setCurrentView] = useState<'list' | 'board' | 'calendar'>('list')
+  const [filteredTodos, setFilteredTodos] = useState<Todo[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const { user, signOut } = useAuth()
 
   const handleSignOut = async () => {
@@ -58,6 +64,20 @@ export default function TodoList() {
       loadTodos()
     }
   }, [user])
+
+  // Update filtered todos when todos or search changes
+  useEffect(() => {
+    let filtered = todos
+    
+    if (searchQuery.trim()) {
+      filtered = todos.filter(todo =>
+        todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (todo.description && todo.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    }
+    
+    setFilteredTodos(filtered)
+  }, [todos, searchQuery])
 
   useEffect(() => {
     const checkDueDates = () => {
@@ -106,6 +126,11 @@ export default function TodoList() {
     title: string
     description?: string
     due_date: string
+    priority?: 'low' | 'medium' | 'high'
+    category_id?: string | null
+    tags?: string[]
+    estimated_time?: number | null
+    is_recurring?: boolean
   }) => {
     if (!user) return
 
@@ -121,6 +146,11 @@ export default function TodoList() {
     title: string
     description?: string
     due_date: string
+    priority?: 'low' | 'medium' | 'high'
+    category_id?: string | null
+    tags?: string[]
+    estimated_time?: number | null
+    is_recurring?: boolean
   }) => {
     if (!user || !editingTodo) return
 
@@ -184,6 +214,45 @@ export default function TodoList() {
     }
   }
 
+  const handleUpdateTodoFromKanban = async (id: string, updates: Partial<Todo>) => {
+    if (!user) return
+
+    try {
+      const updatedTodo = await apiClient.updateTodo(user.id, id, updates)
+      setTodos(prevTodos => 
+        Array.isArray(prevTodos) 
+          ? prevTodos.map(t => t.id === id ? { ...t, ...updatedTodo } : t)
+          : [updatedTodo]
+      )
+    } catch (error) {
+      console.error('Failed to update todo:', error)
+    }
+  }
+
+  const handleDeleteTodoFromKanban = async (id: string) => {
+    if (!user) return
+
+    try {
+      await apiClient.deleteTodo(user.id, id)
+      setTodos(prevTodos => 
+        Array.isArray(prevTodos) 
+          ? prevTodos.filter(t => t.id !== id)
+          : []
+      )
+    } catch (error) {
+      console.error('Failed to delete todo:', error)
+    }
+  }
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query)
+  }
+
+  const handleFilter = (filters: any) => {
+    // TODO: Implement advanced filtering
+    console.log('Filters applied:', filters)
+  }
+
   const handleShowDetails = (todo: Todo) => {
     setDetailsTodo(todo)
     setShowDetailsModal(true)
@@ -232,9 +301,9 @@ export default function TodoList() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-lg border-b border-white/20 sticky top-0 z-10">
+      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-white/20 dark:border-gray-700/20 sticky top-0 z-10">
         <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 sm:space-x-3">
@@ -244,14 +313,58 @@ export default function TodoList() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                   My Tasks
                 </h1>
-                <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">Stay organized, stay productive</p>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden sm:block">Stay organized, stay productive</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* View Switcher */}
+              <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                <button
+                  onClick={() => setCurrentView('list')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    currentView === 'list'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <svg className="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                  List
+                </button>
+                <button
+                  onClick={() => setCurrentView('board')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    currentView === 'board'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <svg className="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  Board
+                </button>
+                <button
+                  onClick={() => setCurrentView('calendar')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    currentView === 'calendar'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <svg className="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Calendar
+                </button>
+              </div>
+              
+              <ThemeToggle />
               <div className="hidden md:flex items-center space-x-2 px-2 sm:px-3 py-1 bg-green-100 rounded-full">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-xs font-medium text-green-700">
@@ -273,18 +386,30 @@ export default function TodoList() {
         </div>
       </div>
 
+      {/* Search and Filters */}
+      {(currentView === 'list' || currentView === 'board') && (
+        <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
+          <SearchFilter
+            onSearch={handleSearch}
+            onFilter={handleFilter}
+            className="mb-6"
+          />
+        </div>
+      )}
+
       <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-7xl">
-        <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-5">
-          {/* Create Form - Left Column */}
-          <div className="lg:col-span-2 order-1">
-            <div className="lg:sticky lg:top-24">
-              <TodoForm
-                onSubmit={editingTodo ? handleUpdateTodo : handleCreateTodo}
-                editingTodo={editingTodo || undefined}
-                onCancel={editingTodo ? () => setEditingTodo(null) : undefined}
-              />
+        {currentView === 'list' && (
+          <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-5">
+            {/* Create Form - Left Column */}
+            <div className="lg:col-span-2 order-1">
+              <div className="lg:sticky lg:top-24">
+                <TodoForm
+                  onSubmit={editingTodo ? handleUpdateTodo : handleCreateTodo}
+                  editingTodo={editingTodo || undefined}
+                  onCancel={editingTodo ? () => setEditingTodo(null) : undefined}
+                />
+              </div>
             </div>
-          </div>
 
           {/* Tasks List - Right Column */}
           <div className="lg:col-span-3 order-2">
@@ -337,7 +462,7 @@ export default function TodoList() {
                     </div>
                   </div>
                 ) : (
-                  todos.map(todo => (
+                  (filteredTodos.length > 0 ? filteredTodos : todos).map(todo => (
                     <TodoItem
                       key={todo.id}
                       todo={todo}
@@ -351,15 +476,45 @@ export default function TodoList() {
             </div>
           </div>
         </div>
+        )}
 
-        {/* Big Calendar at Bottom */}
-        <div className="mt-8">
-          <BigCalendar
-            todos={todos}
-            onEditTodo={handleShowDetails}
-            onToggleComplete={handleToggleComplete}
-          />
-        </div>
+        {/* Kanban Board View */}
+        {currentView === 'board' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+                Task Board
+              </h2>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Drag tasks between columns to update their status
+              </div>
+            </div>
+            <KanbanView
+              todos={filteredTodos.length > 0 ? filteredTodos : todos}
+              onUpdateTodo={handleUpdateTodoFromKanban}
+              onDeleteTodo={handleDeleteTodoFromKanban}
+            />
+          </div>
+        )}
+
+        {/* Calendar View */}
+        {currentView === 'calendar' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+                Calendar View
+              </h2>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                View your tasks organized by date
+              </div>
+            </div>
+            <BigCalendar
+              todos={todos}
+              onEditTodo={handleShowDetails}
+              onToggleComplete={handleToggleComplete}
+            />
+          </div>
+        )}
       </div>
 
       <DueDateModal

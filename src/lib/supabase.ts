@@ -14,4 +14,10 @@ export type Todo = {
   user_id: string
   created_at: string
   updated_at: string
+  priority?: 'low' | 'medium' | 'high'
+  category_id?: string | null
+  tags?: string[]
+  estimated_time?: number | null
+  is_recurring?: boolean
+  progress?: number
 }

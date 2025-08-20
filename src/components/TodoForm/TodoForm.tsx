@@ -2,12 +2,20 @@
 
 import { useState } from 'react';
 import { Todo } from '@/lib/supabase';
+import PrioritySelector from '../PrioritySelector/PrioritySelector';
+import CategorySelector from '../CategorySelector/CategorySelector';
+import TagInput from '../TagInput/TagInput';
 
 interface TodoFormProps {
   onSubmit: (todo: {
     title: string;
     description?: string;
     due_date: string;
+    priority?: 'low' | 'medium' | 'high';
+    category_id?: string | null;
+    tags?: string[];
+    estimated_time?: number | null;
+    is_recurring?: boolean;
   }) => Promise<void>;
   editingTodo?: Todo;
   onCancel?: () => void;
@@ -22,6 +30,19 @@ export default function TodoForm({
   const [description, setDescription] = useState(
     editingTodo?.description || ''
   );
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(
+    (editingTodo?.priority as 'low' | 'medium' | 'high') || 'medium'
+  );
+  const [categoryId, setCategoryId] = useState<string | null>(
+    editingTodo?.category_id || null
+  );
+  const [tags, setTags] = useState<string[]>(
+    editingTodo?.tags || []
+  );
+  const [estimatedTime, setEstimatedTime] = useState<number | null>(
+    editingTodo?.estimated_time || null
+  );
+  const [isRecurring, setIsRecurring] = useState(false);
   const [dueDate, setDueDate] = useState(() => {
     if (editingTodo?.due_date) {
       // Convert UTC to local time for datetime-local input
@@ -71,6 +92,11 @@ export default function TodoForm({
         title: title.trim(),
         description: description.trim() || undefined,
         due_date: new Date(dueDate).toISOString(),
+        priority,
+        category_id: categoryId,
+        tags,
+        estimated_time: estimatedTime,
+        is_recurring: isRecurring,
       });
 
       if (!editingTodo) {
@@ -172,6 +198,70 @@ export default function TodoForm({
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
             />
+          </div>
+
+          {/* Priority, Category, and Tags Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Priority
+              </label>
+              <PrioritySelector
+                value={priority}
+                onChange={setPriority}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Category
+              </label>
+              <CategorySelector
+                value={categoryId || undefined}
+                onChange={setCategoryId}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Estimated Time (min)
+              </label>
+              <input
+                type="number"
+                placeholder="30"
+                className="w-full px-3 sm:px-4 py-1.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 bg-gray-50 focus:bg-white placeholder-gray-400 text-sm"
+                value={estimatedTime || ''}
+                onChange={(e) => setEstimatedTime(e.target.value ? parseInt(e.target.value) : null)}
+                min="1"
+              />
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Tags
+            </label>
+            <TagInput
+              tags={tags}
+              onChange={setTags}
+            />
+          </div>
+
+          {/* Recurring Task Option */}
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="recurring"
+              checked={isRecurring}
+              onChange={(e) => setIsRecurring(e.target.checked)}
+              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+            />
+            <label htmlFor="recurring" className="text-sm font-medium text-gray-700">
+              Make this a recurring task
+            </label>
           </div>
 
           <div className="space-y-2">
